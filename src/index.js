@@ -3,6 +3,9 @@ import ReactDOM from 'react-dom';
 import './index.css';
 import * as serviceWorker from './serviceWorker';
 import { createStore, combineReducers } from 'redux';
+import TodoList from './components/TodoList';
+import AddTodo from './components/AddTodo';
+import Footer from './components/Footer';
 
 const todo = (state, action) => {
   switch (action.type) {
@@ -54,34 +57,59 @@ const todoApp = combineReducers({
 
 const store = createStore(todoApp);
 
+const getVisibleTodos = (todos, filter) => {
+  switch (filter) {
+    case 'SHOW_ALL':
+      return todos;
+    case 'SHOW_COMPLETED':
+      return todos.filter((todo) => {
+        return todo.completed;
+      });
+    case 'SHOW_ACTIVE':
+      return todos.filter((todo) => {
+        return !todo.completed;
+      });
+    default:
+      return todos;
+  }
+};
+
 let nextTodoId = 0;
 
 class TodoApp extends React.Component {
   render() {
+    const visibleTodos = getVisibleTodos(
+      this.props.todos,
+      this.props.visibilityFilter
+    );
     return (
       <div className="App">
-        <input
-          ref={(node) => {
-            this.input = node;
-          }}
-        />
-        <button
-          onClick={() => {
+        <AddTodo
+          onAddClick={(text) =>
             store.dispatch({
               type: 'ADD_TODO',
-              text: this.input.value,
-              id: nextTodoId++,
+              id: (nextTodoId += 1),
+              text,
+            })
+          }
+        />
+        <TodoList
+          todos={visibleTodos}
+          onTodoClick={(id) =>
+            store.dispatch({
+              type: 'TOGGLE_TODO',
+              id,
+            })
+          }
+        />
+        <Footer
+          onFilterClick={(filter) => {
+            store.dispatch({
+              type: 'SET_VISIBILITY_FILTER',
+              filter,
             });
-            this.input.value = '';
           }}
-        >
-          Add Todo
-        </button>
-        <ul>
-          {this.props.todos.map((todo) => {
-            return <li key={todo.id}>{todo.text}</li>;
-          })}
-        </ul>
+        />
       </div>
     );
   }
@@ -90,7 +118,7 @@ class TodoApp extends React.Component {
 const render = () => {
   ReactDOM.render(
     <React.StrictMode>
-      <TodoApp todos={store.getState().todos} />
+      <TodoApp {...store.getState()} />
     </React.StrictMode>,
     document.getElementById('root')
   );
